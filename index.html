@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html" charset="UTF-8">
+<title>YouTube Player</title>
+<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<link rel="shortcut icon" type="image/png" href="../hachi.png"/>
+<style>
+/*clear float*/
+.clearfix:before, .clearfix:after { content:""; display:table;}
+.clearfix:after { clear:both;}
+.clearfix { *zoom:1;}
+
+/* scroll bar for webkit */
+::-webkit-scrollbar {
+    width: 5px;
+}
+::-webkit-scrollbar-track {
+    background-color: #EEE;
+}
+::-webkit-scrollbar-thumb {
+    background-color: #999;
+}
+::-webkit-scrollbar-button {
+    height: 0;
+}
+::-webkit-scrollbar-corner {
+    background-color: #333;
+}
+
+body {
+    padding: 0;
+    margin: 0;
+    background-color: #000;
+    font-family: Roboto,arial,sans-serif;
+}
+html, body, #mainBody {
+    height: 100%;
+}
+#mainBody {
+    padding-left: 240px;
+}
+#ytPlayer {
+    width: 100%;
+    height: 95%;
+}
+.v-list {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 240px;
+    height: 100%;
+    background-color: #14344A;
+    padding-bottom: 50px;
+    box-sizing: border-box;
+}
+.v-list-wrap {
+    width: 240px;
+    height: 100%;
+    box-sizing: border-box;
+    overflow-y: scroll;
+}
+.v-list-unit {
+    width: 200px;
+    height: 75px;
+    overflow: hidden;
+    background-size: 100% auto;
+    background-repeat: no-repeat;
+    background-position: 50% 50%;
+    cursor: pointer;
+    border: 1px solid #14344A;
+}
+.yt-list-wrap .v-list-unit {
+    border: 1px solid transparent;
+}
+.v-list-unit:hover,
+.v-list-unit.v-current {
+    height: 150px;
+    transform: scale(1.1,1.1);
+    margin-left: 10px;
+    border-radius: 0 15px 15px 0;
+    overflow: hidden;
+    border: 1px solid #FFF;
+}
+.v-list-unit:hover {
+    border: 1px solid #FFF;
+}
+.v-list-unit.v-current {
+    border: 1px solid #FD5D23;
+}
+.v-list-unit.v-current .v-title {
+    color: #FD5D23;
+}
+.v-title {
+    display: block;
+    width: 90%;
+    padding: 10px 5% 0;
+    background: rgba(0,0,0,0.8);
+    font-weight: 15px;
+    color: #FFF;
+}
+/* control */
+#player-control-wrap {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    height: 50px;
+}
+#player-control-wrap a {
+    float: left;
+    width: 33%;
+    line-height: 50px;
+    height: 100%;
+    text-align: center;
+    text-decoration: none;
+    font-size: 24px;
+    color: #FFF;
+    background: #000;
+}
+/* #ytPlaylist */
+#yt-list-btn {
+    position: fixed;
+    right: 0;
+    top: 50px;
+    background: #FFF09C;
+    width: 60px;
+    height: 36px;
+    line-height: 36px;
+    text-align: center;
+    border-radius: 5px 0 0 5px;
+    cursor: pointer;
+    transition: all 1s;
+}
+#yt-list-btn:hover,
+#yt-list-btn.current {
+    background-color: #111;
+    color: #FFF;
+}
+#yt-list-btn i {
+    font-style: normal;
+    transition: all 1s;
+}
+#yt-list-btn:hover i,
+#yt-list-btn.current i {
+    color: #F00;
+}
+#yt-list-wrap {
+    position: fixed;
+    left: 20%;
+    top: 10%;
+    width: 60%;
+    height: 80%;
+    background: #D0D0D0;
+    padding: 15px;
+    box-sizing: border-box;
+    border-radius: 0 30px 0 30px;
+}
+.yt-form {
+    position: absolute;
+    left: 27px;
+    top: 13px;
+}
+#yt-list-id {
+    width: 300px;
+    height: 36px;
+    box-sizing: border-box;
+}
+#yt-list-wrap a {
+    display: inline-block;
+    height: 36px;
+    line-height: 36px;
+    padding: 0 10px;
+    background: #5A768E;
+    background: linear-gradient(#5A768E, #013247);
+    color: #DFE9EE;
+    border-radius: 3px;
+    text-decoration: none;
+}
+#yt-list-wrap a:hover {
+    background: #5A648E;
+    background: linear-gradient(#5A648E, #010647);
+    color: #FFF;
+}
+.yt-list-base {
+    height: 100%;
+    padding-top: 46px;
+    box-sizing: border-box;
+}
+#yt-list {
+    height: 100%;
+    padding: 12px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    border-radius: 0 0 0 30px;
+}
+#yt-list .v-list-unit {
+    float: left;
+    height: 150px;
+}
+#yt-list .v-list-unit:hover {
+    margin-left: 0;
+    border-radius: 15px;
+}
+</style>
+
+</head>
+<body>
+    <div id="mainBody">
+        <div class="v-list">
+            <div class="v-list-wrap"></div>
+        </div>
+
+        <div id="ytPlayer"></div>
+
+        <div id="player-control-wrap">
+            <a id="play-prev" href="###">Prev</a>
+            <a id="play-pause" href="###">Pause</a>
+            <a id="play-start" href="###" style="display:none">Start</a>
+            <a id="play-next" href="###">Next</a>
+        </div>
+
+        <div id="yt-list-btn">(´<i>・</i>ω<i>・</i>`)</div>
+
+        <div id="yt-list-wrap" style="display:none">
+            <div class="yt-form">
+                <input type="text" id="yt-list-id" value="PL4dhVbP4eLMBKHc5vATTnqrogndQC16bb" />
+                <a href="###" id="yt-list-import">import</a>
+                <a href="###" id="yt-list-replace">replace</a>
+            </div>
+            <div class="yt-list-base">
+                <div id="yt-list"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+    "use strict";
+
+
+    var player,
+        vListData = ['B3vqcbJwgCI','AULG4MoYxQk','7wfYIMyS_dI'],
+        vListCount = vListData.length,
+        nowPlaying = 0,
+        goPlay = null,
+        vListHtml = '',
+        vListHtmlAry = [],
+        importAry = [];
+
+    if(typeof(Storage) !== "undefined") {
+        if(localStorage.ytPlaylist !== undefined) {
+            vListData = JSON.parse(localStorage.ytPlaylist);
+            vListCount = vListData.length;
+        }
+    }
+
+    //YouTube API
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('ytPlayer', {
+            height: '390',
+            width: '640',
+            videoId: vListData[0],
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
+            }
+        });
+    }
+    function onPlayerReady(event) {
+        event.target.playVideo();
+    }
+
+    var prevState = 0;
+    function onPlayerStateChange(event) {
+        if (event.data === 0){//ended
+            $('#play-next').trigger('click');
+            $('.v-list-wrap').scrollTop(75 * nowPlaying);
+        }else if(event.data === 1){//playing
+            $('#play-start').hide();
+            $('#play-pause').show();
+        }else if(event.data === 2){//paused
+            $('#play-start').show();
+            $('#play-pause').hide();
+        }else if(event.data === -1){//unstarted
+            // if(prevState === 3){
+            //     $('#play-next').trigger('click');
+            //     console.log('Error! Play the next video automatic.');
+            // }
+        }else if(event.data === 3){//buffering
+             //選單current + scroll
+            $('.v-list-wrap .v-list-unit').removeClass('v-current');
+            $('.v-list-wrap .v-list-unit[data-lnum="'+ nowPlaying +'"]').addClass('v-current');
+
+            //換title
+            document.title = $('.v-list-wrap .v-list-unit[data-lnum="'+ nowPlaying +'"]').find('.v-title').html();
+        }
+        prevState = event.data;
+    }
+    function stopVideo() {
+        player.stopVideo();
+    }
+
+    //makePlayList(html)
+    var makePlayList = function(vListCount, vListData){
+        var ary = [], html;
+        //PlayList create
+        for(var i = 0; i < vListCount; i++) {
+            ary.push('<div class="v-list-unit" style="background-image:url(https://i.ytimg.com/vi/' + vListData[i] + '/0.jpg)" data-lnum="' + i + '" data-vid="' +vListData[i] + '"><span class="v-title"></span></div>');
+        }
+        return html = ary.join('');
+    }
+    vListHtml = makePlayList(vListCount, vListData);
+    $('.v-list-wrap').html(vListHtml);
+
+    //PlayList click
+    $(document).on('click', '.v-list-wrap .v-list-unit', function(){
+        if($(this).data('lnum') === nowPlaying){return;}
+
+        player.loadVideoById(vListData[$(this).data('lnum')]);
+        nowPlaying = $(this).data('lnum');
+    })
+
+    //play-next
+    $('#play-next').click(function(){
+        if(nowPlaying === (vListCount - 1)){
+            nowPlaying = 0;
+        }else{
+            nowPlaying += 1;
+        }
+        goPlay = nowPlaying;
+
+        player.loadVideoById(vListData[goPlay]);
+    });
+
+    //play-prev
+    $('#play-prev').click(function(){
+        if(nowPlaying === 0){
+            nowPlaying = (vListCount - 1);
+        }else{
+            nowPlaying -= 1;
+        }
+        goPlay = nowPlaying;
+
+        player.loadVideoById(vListData[goPlay]);
+    });
+
+    //play-pause
+    $('#play-pause').click(function(){
+        if(player.pauseVideo()){
+            $(this).toggle();
+            $('#play-start').toggle();
+        }
+    });
+
+    //play-start
+    $('#play-start').click(function(){
+        if(player.playVideo()){
+            $(this).toggle();
+            $('#play-pause').toggle();
+        }
+    });
+
+    //#yt-list-btn
+    $('#yt-list-btn').click(function(){
+        $('#yt-list-wrap').toggle();
+        if($(this).hasClass('current')){
+            $(this).removeClass('current');
+            return;
+        }
+        $(this).addClass('current');
+    });
+    //#yt-list-import
+    $('#yt-list-import').click(function(){
+        $('#yt-list').html('');
+        importAry = [];
+        getPlayList($('#yt-list-id').val());
+
+        $("#yt-list .v-list-unit").each(function(){
+            getYTTitle($(this).data('vid'), $(this));
+        });
+    });
+    //import取代原播放清單
+    $('#yt-list-replace').click(function(){
+        vListData = importAry;
+        localStorage.ytPlaylist = JSON.stringify(importAry);
+        vListCount = vListData.length;
+        importAry = [];
+        $('.v-list-wrap').html($('#yt-list').html());
+        $('#yt-list').html('');
+        $('#yt-list-wrap').hide();
+        $('#yt-list-btn').removeClass('current');
+
+        nowPlaying = 0;
+        player.loadVideoById(vListData[0]);
+    });
+
+    //透過php抓取影片資訊
+    $(window).load(function(){
+        $(".v-list-wrap .v-list-unit").each(function(){
+            //console.log($(this).data('vid'));
+            getYTTitle($(this).data('vid'), $(this));
+        });
+    });
+    //抓取title放入title欄
+    var getYTTitle = function(vid, target){
+        $.ajax({
+                url: 'app/videoInfo.php?id='+ vid
+            })
+                .done(function(data){
+                    //console.log($.parseJSON(data).title);
+                    target.find('.v-title').prepend($.parseJSON(data).title);
+                });
+    }
+
+    //抓取播放清單並直接組成HTML(makePlayList)放入#yt-list
+    var getPlayList = function(vid){
+        $.ajax({
+                url: 'app/playListInfo.php?id='+ vid,
+                async: false
+            })
+                .done(function(data){
+                    for(var i = 0; i < $.parseJSON(data).items.length; i++) {
+                        //console.log($.parseJSON(data).items[i].snippet.resourceId.videoId);
+                        importAry.push($.parseJSON(data).items[i].snippet.resourceId.videoId);
+                    }
+
+                    var importAryCount = importAry.length,
+                    importHtml = makePlayList(importAryCount, importAry);
+
+                    $('#yt-list').html(importHtml);
+                });
+    }
+
+    </script>
+</body>
+</html>
